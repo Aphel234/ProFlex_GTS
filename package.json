@@ -1,0 +1,25 @@
+{
+  "name": "proflex-gts-angebotsmanager",
+  "version": "9.11.0",
+  "private": true,
+  "type": "module",
+  "description": "ProFlex / GTS / Angebotsmanager für GitHub Pages",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "preview": "npx serve dist",
+    "benchmark:grade-groups": "node scripts/benchmark-grade-groups.mjs"
+  },
+  "dependencies": {
+    "jspdf": "4.2.1",
+    "jspdf-autotable": "5.0.8",
+    "jszip": "3.10.1",
+    "exceljs": "4.4.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.12"
+  },
+  "overrides": {
+    "uuid": "11.1.1"
+  }
+}

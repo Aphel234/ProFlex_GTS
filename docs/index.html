@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1f4e78">
+  <meta name="description" content="ProFlex / GTS / Angebotsmanager – lokale Kurs- und Angebotsplanung direkt im Browser">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <title>ProFlex / GTS / Angebotsmanager</title>
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <p class="eyebrow">GitHub-Pages-Version · V9.11.0 · Daten bleiben im Browser</p>
+      <h1>ProFlex / GTS / Angebotsmanager</h1>
+    </div>
+    <div class="header-actions">
+      <span id="saveState" class="status-pill">lokal gespeichert</span>
+      <button id="optimizeBtn" class="button primary">Zuteilung berechnen</button>
+    </div>
+  </header>
+
+  <div class="privacy-banner">
+    <strong>Datenschutz:</strong> Die Anwendung überträgt keine Personendaten an einen Server.
+  </div>
+
+  <main class="shell">
+    <aside class="sidebar">
+      <label class="field-label" for="eventName">Veranstaltung</label>
+      <input id="eventName" class="text-input" type="text" autocomplete="off">
+
+      <nav id="tabs" class="tabs" aria-label="Bereiche">
+        <button data-tab="dashboard" class="tab active">Übersicht</button>
+        <button data-tab="workshops" class="tab">Angebote</button>
+        <button data-tab="participants" class="tab">Teilnehmende</button>
+        <button data-tab="enrollment" class="tab">Einwahl</button>
+        <button data-tab="results" class="tab">Zuteilung</button>
+        <button data-tab="planning" class="tab">Auswertung</button>
+        <button data-tab="exchange" class="tab">Datenaustausch</button>
+        <button data-tab="settings" class="tab">Einstellungen</button>
+      </nav>
+
+      <section class="side-card">
+        <h2>Projekt</h2>
+        <p class="section-help">Das Projekt wird automatisch lokal gespeichert.</p>
+        <button id="deleteProjectBtn" class="button full danger project-delete" type="button">Aktuelles Projekt leeren</button>
+      </section>
+    </aside>
+
+    <section class="content">
+      <section id="dashboard" class="panel active-panel" data-panel="dashboard">
+        <div class="panel-heading">
+          <div><p class="eyebrow">Status</p><h2>Übersicht</h2></div>
+        </div>
+        <div id="stats" class="stats-grid"></div>
+        <div class="grid">
+          <article class="card">
+            <h3>Aktuelle Datenprüfung</h3>
+            <div id="validationSummary" class="message-list muted">Noch nicht geprüft.</div>
+          </article>
+        </div>
+        <article class="card">
+          <h3>So funktioniert die Berechnung</h3>
+          <ol class="steps">
+            <li>Die Einwahl erfolgt nach <strong>Angeboten</strong>. Mehrere Durchführungen desselben Angebots zählen als derselbe Wunsch.</li>
+            <li>Bei <strong>Standard</strong> oder <strong>Gründlich</strong> werden mehrere zulässige Startvarianten berechnet und die beste Verteilung gewählt.</li>
+            <li><strong>Wunschpriorität:</strong> Erst- und Zweitwünsche stehen im Mittelpunkt. Drittwünsche werden nur als Notlösung genutzt; Viertwünsche sind die absolute Notkategorie. Unvermeidbare Dritt-/Viertwünsche werden möglichst gleichmäßig auf die Kurse verteilt.</li>
+            <li>Pflichtangebote und feste Setzungen werden zwingend geöffnet. Mindestzahlen sind vorrangige Ziele: Der Solver erfüllt sie zunächst exakt und unterschreitet sie nur im automatischen Bestmöglich-Fallback. Maximalbelegungen bleiben harte Grenzen.</li>
+            <li><strong>Vollständigkeit zuerst:</strong> Kein Schüler bleibt allein zur Einhaltung einer Zusammensetzungsregel unzugeteilt. Nicht gleichzeitig erfüllbare Regeln werden mit möglichst kleiner Abweichung und konkretem Hinweis ausgegeben.</li>
+            <li><strong>Wünsche oder Jahrgangsverteilung:</strong> Mit dem Regler bestimmst du, welche vollständige Zuteilung bevorzugt wird. In Mittelstellung berücksichtigt der Solver beide Ziele gleichrangig.</li>
+            <li><strong>Jahrgangs- und Gruppenregeln:</strong> Min-/Max-Werte je Jahrgang werden bestmöglich eingehalten. Die optionale Jahrgangsgruppen-Regel prüft derzeit die Blöcke 8+9 und 10 aufwärts auf Gruppengröße 4.</li>
+            <li>Weitere Gruppenregeln können pro Klasse, Jahrgang oder Jahrgang + Bildungsgang wirken – standardmäßig <strong>Bevorzugt</strong> oder stärker gewichtet als <strong>Vorrangig</strong>.</li>
+            <li>Optionale Durchführungen dürfen entfallen, wenn ihr Mindestziel nicht erreichbar ist.</li>
+            <li>Kleine Kurse bis zur Ausgleichsschwelle erhalten ihre Maximalgröße als Ziel. Der Rest wird auf die größeren Kurse möglichst gleichmäßig verteilt.</li>
+          </ol>
+        </article>
+      </section>
+
+      <section class="panel" data-panel="planning">
+        <div class="panel-heading">
+          <div><p class="eyebrow">Nachfrage, Engpässe und Alternativen</p><h2>Auswertung</h2><p class="section-help">Die Nachfrage wird nach Angebot zusammengefasst. Mehrere Durchführungen desselben Angebots teilen sich eine Gesamtkapazität.</p></div>
+          <div class="inline-actions">
+            <button id="refreshPlanningBtn" class="button" type="button">Analyse aktualisieren</button>
+            <button id="compareSolutionsBtn" class="button primary" type="button">Drei Lösungen vergleichen</button>
+          </div>
+        </div>
+        <div id="planningStats" class="stats-grid"></div>
+        <article class="card">
+          <div class="card-heading-inline"><div><h3>Nachfrage- und Beliebtheitsstatistik</h3><p class="section-help">Gezählt werden die ursprünglichen Einwahlen – unabhängig davon, welchem Kurs ein Schüler später zugeteilt wurde.</p></div><select id="demandSort"><option value="popularity">Beliebtheit</option><option value="pressure">Kapazitätsdruck</option><option value="name">Name</option></select></div>
+          <div class="table-wrap"><table id="demandTable"></table></div>
+        </article>
+        <article class="card bottleneck-card">
+          <h3>Globale Engpässe & Maßnahmen</h3>
+          <p class="section-help">Empfehlungen werden nach erwarteter Wirkung sortiert. Änderungen werden nie automatisch übernommen.</p>
+          <div id="bottleneckList" class="insight-list"></div>
+        </article>
+        <article class="card">
+          <h3>Lösungsvergleich</h3>
+          <p class="section-help">Die drei Profile verwenden dieselben verbindlichen Kapazitäten, Sperrungen und festen Setzungen. Dadurch wird sichtbar, ob die Einstellungen für diese Daten überhaupt einen Unterschied erzeugen.</p>
+          <div id="comparisonNotice" class="message">Noch kein Vergleich berechnet.</div>
+          <div id="comparisonCards" class="comparison-grid"></div>
+        </article>
+      </section>
+
+      <section class="panel" data-panel="workshops">
+        <div class="panel-heading">
+          <div><p class="eyebrow">Maximal 30 Durchführungen</p><h2>Angebote & Durchführungen</h2><p class="section-help">Gleiche Angebots-ID = derselbe Wunsch. Mit ＋ legst du eine weitere Gruppe desselben Angebots an. Über „Jahrgänge & Gruppen …“ stellst du Jahrgangsgrenzen und bei Bedarf die Jahrgangsgruppen-Regel ein.</p></div>
+          <button id="addWorkshopBtn" class="button">Angebot hinzufügen</button>
+        </div>
+        <div class="table-wrap"><table id="workshopsTable"></table></div>
+      </section>
+
+      <section class="panel" data-panel="participants">
+        <div class="panel-heading">
+          <div><p class="eyebrow">Maximal 500</p><h2>Teilnehmende</h2></div>
+          <div class="inline-actions">
+            <input id="participantSearch" class="text-input compact" type="search" placeholder="Suchen …">
+            <button id="addParticipantBtn" class="button">Person hinzufügen</button>
+          </div>
+        </div>
+        <div class="table-wrap"><table id="participantsTable"></table></div>
+      </section>
+
+      <section class="panel" data-panel="enrollment">
+        <div class="panel-heading">
+          <div><p class="eyebrow">Import und Qualitätskontrolle</p><h2>Einwahl</h2><p class="section-help">Umfrageantworten werden tolerant eingelesen. Fehlende Klassen, doppelte Wünsche und unvollständige Einwahlen bleiben sichtbar, ohne den gesamten Import abzubrechen.</p></div>
+          <div class="inline-actions">
+            <button id="surveyImportBtn" class="button primary survey-import-button" type="button">Umfrage-Dateien importieren</button>
+            <button id="attendanceCheckBtn" class="button attendance-check-button" type="button">Einwahlteilnahme prüfen</button>
+          </div>
+        </div>
+        <div id="enrollmentStats" class="stats-grid"></div>
+        <article class="card">
+          <h3>Datenprüfung</h3>
+          <p class="section-help">Jede Meldung nennt die betroffene Person, Klasse und den konkreten Grund.</p>
+          <div class="table-wrap"><table id="enrollmentIssuesTable"></table></div>
+        </article>
+      </section>
+
+      <section class="panel" data-panel="results">
+        <div class="panel-heading">
+          <div><p class="eyebrow">Berechnen und nachbearbeiten</p><h2>Zuteilung</h2></div>
+          <div class="inline-actions">
+            <button id="optimizeBtnSecondary" class="button primary">Neu berechnen</button>
+          </div>
+        </div>
+        <details class="card advanced-card">
+          <summary><strong>Sperrungen</strong> <span class="muted">optional</span></summary>
+          <p class="section-help">Hier können einzelne Personen für bestimmte Durchführungen ausgeschlossen werden.</p>
+          <div class="rule-toolbar"><button id="addLockBtn" class="button" type="button">Sperrung hinzufügen</button></div>
+          <div class="table-wrap"><table id="locksTable"></table></div>
+        </details>
+        <div id="resultPlaceholder" class="empty-state">Noch keine Zuteilung berechnet.</div>
+        <div id="resultContent" hidden>
+          <div id="resultStats" class="stats-grid"></div>
+          <article id="reviewModeCard" class="card review-card" hidden>
+            <div class="diagnostic-heading"><div><p class="eyebrow">Geführte Nachbearbeitung</p><h3>Prüfmodus</h3></div><span id="reviewProgress" class="badge warn"></span></div>
+            <div id="reviewModeBody"></div>
+            <div class="review-navigation"><button id="reviewPrevBtn" class="button" type="button">← Vorheriger Fall</button><button id="reviewSkipBtn" class="button" type="button">Fall überspringen</button><button id="reviewNextBtn" class="button" type="button">Nächster Fall →</button></div>
+          </article>
+          <article id="unassignedDiagnosticsCard" class="card diagnostic-card" hidden>
+            <div class="diagnostic-heading">
+              <div><p class="eyebrow">Konkrete Einzelfälle</p><h3>Unzugeteilte Schüler – Diagnose & Vorschläge</h3></div>
+              <span class="badge warn">Bestmögliche Empfehlungen</span>
+            </div>
+            <p class="section-help">Alle Vorschläge liegen innerhalb der eingetragenen Wünsche. Volle Kurse können nach Bestätigung manuell überbelegt werden; sämtliche offenen Prüffälle werden danach mit der aktuellen Belegung neu berechnet.</p>
+            <div class="table-wrap"><table id="unassignedDiagnosticsTable" class="diagnostic-table"></table></div>
+          </article>
+          <article class="card">
+            <h3>Angebotsübersicht</h3>
+            <div class="table-wrap"><table id="courseResultsTable"></table></div>
+          </article>
+          <article class="card">
+            <h3>Zuordnung der Teilnehmenden</h3>
+            <div class="table-wrap"><table id="participantResultsTable"></table></div>
+          </article>
+          <article class="card">
+            <div class="card-heading-inline"><div><h3>Änderungsprotokoll</h3><p class="section-help">Manuelle Zuordnungen, Überbelegungen, Tausche und übernommene Planungsempfehlungen.</p></div><button id="clearAuditBtn" class="button" type="button">Protokoll leeren</button></div>
+            <div id="auditLog" class="audit-list"></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="panel" data-panel="exchange">
+        <div class="panel-heading">
+          <div><p class="eyebrow">Vorlagen, Importe und Exporte</p><h2>Vorlagen & Datenaustausch</h2><p class="section-help">Alle Dateien werden lokal im Browser erstellt oder verarbeitet.</p></div>
+        </div>
+        <div class="exchange-grid">
+          <article class="card exchange-card">
+            <h3>Vorlagen</h3>
+            <button id="providerTemplateBtn" class="button full" type="button">Zulieferervorlage für Angebote</button>
+            <button id="rosterTemplateBtn" class="button full" type="button">Schüler- und Klassenlistenvorlage</button>
+            <button id="surveyTemplateBtn" class="button full" type="button">Umfragevorlage herunterladen</button>
+            <button id="templateBtn" class="button full template-button" type="button">Vollständige Importvorlage mit aktuellen Angeboten</button>
+          </article>
+          <article class="card exchange-card">
+            <h3>Projektdateien</h3>
+            <button id="excelImportBtn" class="button full">Excel-Projekt importieren</button>
+            <button id="excelExportBtn" class="button full">Excel-Projekt exportieren</button>
+            <button id="jsonExportBtn" class="button full">JSON-Sicherung herunterladen</button>
+            <button id="jsonImportBtn" class="button full">JSON-Sicherung laden</button>
+            <button id="sampleBtn" class="button full">Beispieldaten bewusst laden</button>
+          </article>
+          <article class="card exchange-card">
+            <h3>Ergebnisse & Listen</h3>
+            <button id="fuxExportBtn" class="button full" type="button">FuxNoten-Excel erstellen</button>
+            <button id="coursePdfBtn" class="button full">Angebotslisten als PDF-ZIP</button>
+            <button id="classPdfBtn" class="button full">Klassenlisten als PDF-ZIP</button>
+            <button id="courseDocxBtn" class="button full">Angebotslisten als Word-ZIP</button>
+            <button id="classDocxBtn" class="button full">Klassenlisten als Word-ZIP</button>
+          </article>
+        </div>
+        <input id="jsonFile" type="file" accept="application/json,.json" hidden>
+        <input id="excelFile" type="file" accept=".xlsx,.xls" hidden>
+        <input id="surveyFiles" type="file" accept=".xlsx" multiple hidden>
+        <input id="attendanceFiles" type="file" accept=".xlsx" multiple hidden>
+      </section>
+
+      <section class="panel" data-panel="settings">
+        <div class="panel-heading">
+          <div><p class="eyebrow">Projekt und Berechnung</p><h2>Einstellungen</h2></div>
+        </div>
+        <article class="card">
+          <h3>Projektart und Einwahl</h3>
+          <div class="form-grid">
+            <label>Projektart
+              <select id="projectType"><option value="school">ProFlex / GTS / Schulprojekt</option><option value="general">Fortbildung / allgemeine Veranstaltung</option></select>
+              <small>Die Projektart setzt eine passende Voreinstellung für die Klassenangabe.</small>
+            </label>
+            <label>Klassenangabe
+              <select id="classRequired"><option value="true">Erforderlich und prüfen</option><option value="false">Optional; Jahrgangsregeln ohne Klasse ignorieren</option></select>
+            </label>
+            <label>Erwartete Anzahl unterschiedlicher Wünsche
+              <select id="expectedWishes"><option value="1">1 Wunsch</option><option value="2">2 Wünsche</option><option value="3">3 Wünsche</option><option value="4">4 Wünsche</option></select>
+              <small>Weniger ausgefüllte Wünsche werden als Hinweis markiert, aber trotzdem importiert.</small>
+            </label>
+          </div>
+        </article>
+        <article class="card">
+          <h3>Zuteilung</h3>
+          <div class="form-grid">
+            <label>Außerhalb der Wünsche zulassen?
+              <select id="allowOutside"><option value="false">Nein</option><option value="true">Ja</option></select>
+            </label>
+            <label>Standard für neue Angebote
+              <select id="defaultMode"><option>Pflicht</option><option>Optional</option></select>
+            </label>
+            <label>Berechnungsqualität
+              <select id="qualityMode"><option value="fast">Schnell – 1 Berechnung</option><option value="standard" selected>Standard – 6 Varianten prüfen</option><option value="thorough">Gründlich – 24 Varianten prüfen</option></select>
+              <small>Standard ist empfohlen. Gründlich prüft mehr Startvarianten.</small>
+            </label>
+            <label class="weight-control">Priorität: Wünsche ↔ Jahrgangsverteilung
+              <input id="gradePreferenceWeight" type="range" min="0" max="100" step="10" value="50" aria-describedby="gradePreferenceWeightHelp">
+              <output id="gradePreferenceWeightOutput" for="gradePreferenceWeight">50 % · Ausgewogen</output>
+              <small id="gradePreferenceWeightHelp">0 % schützt Wünsche stärker, 100 % bevorzugt die bestmögliche Jahrgangsverteilung.</small>
+            </label>
+            <label>Ausgleich der Angebotsgrößen
+              <select id="balanceLevel"><option value="0">Aus</option><option value="10">Leicht</option><option value="50">Mittel</option><option value="100">Stark</option></select>
+            </label>
+            <label>Kleine Angebote bis Maximalgröße
+              <input id="balanceThreshold" type="number" min="0" max="500" step="1">
+              <small>Bis zu dieser Größe werden Angebote vom Größenvergleich ausgenommen.</small>
+            </label>
+          </div>
+        </article>
+        <details class="card advanced-card" id="rulesDetails">
+          <summary><strong>Erweiterte Zuteilungsregeln</strong> <span class="muted">optional</span></summary>
+          <p class="section-help">Nicht vollständig erfüllbare Zusammensetzungsregeln führen zu einer bestmöglichen Zuteilung mit Hinweisen.</p>
+          <div class="rule-toolbar"><button id="addRuleBtn" class="button" type="button">Regel hinzufügen</button></div>
+          <div class="table-wrap"><table id="rulesTable"></table></div>
+        </details>
+      </section>
+    </section>
+  </main>
+
+  <footer class="app-footer" aria-label="Copyright">· © 2026 Oliver Richter</footer>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <dialog id="gradeLimitsDialog" class="grade-limits-dialog">
+    <div class="grade-limits-form">
+      <div class="detail-heading">
+        <div><p class="eyebrow">Angebotszusammensetzung</p><h2 id="gradeLimitsTitle">Jahrgangs- und Gruppenregeln</h2><p id="gradeLimitsSubtitle" class="section-help"></p></div>
+        <button id="gradeLimitsCancelBtn" class="button" type="button">Schließen</button>
+      </div>
+      <section class="debate-rule-card" aria-labelledby="debateRuleHeading">
+        <div>
+          <h3 id="debateRuleHeading">Jahrgangsgruppen-Regel</h3>
+          <p>Aktuelle Einstellung: Jahrgänge 8+9 und Jahrgang 10 aufwärts bilden getrennte Gruppen. Ihre jeweilige Schülerzahl soll durch 4 teilbar sein.</p>
+        </div>
+        <label class="checkbox-row"><input id="debateRuleEnabled" type="checkbox"> <span><strong>Jahrgangsgruppen-Regel aktivieren</strong><small>Bestmöglich: Bei unvermeidbarer Abweichung werden die Schüler trotzdem zugeteilt und ein Hinweis angezeigt.</small></span></label>
+        <label class="checkbox-row"><input id="debateBalanceEnabled" type="checkbox" checked> <span><strong>Beide Jahrgangsgruppen möglichst gleich groß</strong><small>Zusätzliches weiches Ziel nach Vollständigkeit und Regelabweichungen.</small></span></label>
+      </section>
+      <div class="message">Die Felder unten sind zusätzliche Min-/Max-Zielwerte pro Einzeljahrgang. Leer bedeutet keine Vorgabe. Unvermeidbare Abweichungen werden ausgewiesen, verhindern aber keine mögliche Zuteilung.</div>
+      <div class="table-wrap"><table id="gradeLimitsTable" class="grade-limits-table"></table></div>
+      <div class="grade-limits-actions"><button id="gradeLimitsSaveBtn" class="button primary" type="button">Vorgaben übernehmen</button></div>
+    </div>
+  </dialog>
+
+  <dialog id="courseDetailDialog" class="wide-dialog">
+    <form method="dialog" class="course-detail-form">
+      <div class="detail-heading">
+        <div><p class="eyebrow">Angebotsdetail & Nachbearbeitung</p><h2 id="courseDetailTitle">Angebot</h2></div>
+        <button class="button" value="close">Schließen</button>
+      </div>
+      <div class="detail-nav">
+        <button id="prevCourseBtn" class="button" type="button">← Vorheriges Angebot</button>
+        <select id="courseDetailSelect"></select>
+        <button id="nextCourseBtn" class="button" type="button">Nächstes Angebot →</button>
+        <button id="undoMoveBtn" class="button" type="button">↶ Rückgängig</button>
+      </div>
+      <div id="courseDetailStats" class="stats-grid compact-stats"></div>
+      <div id="courseRuleSummary" class="rule-summary"></div>
+      <div class="detail-tabs">
+        <button type="button" class="detail-tab active" data-detail-tab="assigned">Zugeordnet</button>
+        <button type="button" class="detail-tab" data-detail-tab="applicants">Alle Anwähler</button>
+        <button type="button" class="detail-tab" data-detail-tab="swaps">Tauschvorschläge</button>
+      </div>
+      <div id="courseDetailBody"></div>
+    </form>
+  </dialog>
+
+  <dialog id="surveyImportDialog" class="wide-dialog survey-import-dialog">
+    <div class="survey-import-form">
+      <div class="detail-heading">
+        <div><p class="eyebrow">Mehrfach-Umfrageimport</p><h2>Umfrage-Dateien prüfen</h2><p class="section-help">Angebote werden direkt aus ein bis vier Wunschspalten erkannt. Zeitstempel dürfen an beliebiger Stelle stehen. Kombinierte Namen wie „Richter, Oliver“ werden automatisch aufgeteilt.</p></div>
+        <button class="button" type="button" onclick="document.querySelector('#surveyImportDialog').close()">Schließen</button>
+      </div>
+      <div id="surveyImportSummary" class="stats-grid compact-stats"></div>
+      <div id="surveyImportIssues" class="message-list"></div>
+      <section class="survey-review-section">
+        <h3>Angebots-Zuordnungen</h3>
+        <p class="section-help">Die Angebote des aktuellen Projekts sind die Referenz. Neue Angebote müssen ausdrücklich bestätigt werden.</p>
+        <div class="table-wrap"><table id="surveyMappingTable" class="survey-review-table"></table></div>
+      </section>
+      <section id="surveyDuplicateSection" class="survey-review-section" hidden>
+        <h3>Mögliche Dubletten</h3>
+        <p class="section-help">Erkennung über Vorname + Nachname + Klasse. Vorhandene Personen werden standardmäßig nicht doppelt übernommen.</p>
+        <div class="table-wrap"><table id="surveyDuplicateTable" class="survey-review-table"></table></div>
+      </section>
+      <div id="surveyImportBody"></div>
+      <div class="survey-import-actions">
+        <button class="button" type="button" onclick="document.querySelector('#surveyImportDialog').close()">Abbrechen</button>
+        <button id="surveyApplyBtn" class="button primary" type="button">Teilnehmende übernehmen</button>
+      </div>
+    </div>
+  </dialog>
+
+
+  <dialog id="attendanceDialog" class="wide-dialog attendance-dialog">
+    <div class="attendance-form">
+      <div class="detail-heading">
+        <div><p class="eyebrow">Einwahlkontrolle</p><h2>Soll-Liste mit Umfrageantworten abgleichen</h2><p class="section-help">Bei Schulprojekten werden Vorname, Nachname und Klasse erwartet. Ist die Klassenangabe optional, reichen Vor- und Nachname. Fehlende, doppelte oder unbekannte Wünsche werden ebenfalls angezeigt.</p></div>
+        <button id="attendanceCloseBtn" class="button" type="button">Schließen</button>
+      </div>
+      <div id="attendanceSummary" class="stats-grid compact-stats"></div>
+      <div id="attendanceIssues" class="message-list"></div>
+      <div class="attendance-toolbar">
+        <label>Status anzeigen
+          <select id="attendanceFilter">
+            <option value="missing">Fehlt</option>
+            <option value="review">Zu prüfen</option>
+            <option value="invalid">Fehlerhafte Einwahl</option>
+            <option value="matched">Teilgenommen</option>
+            <option value="extra">Nur in Umfrage/Teilnehmendenliste</option>
+            <option value="duplicates">Doppelte Eingaben</option>
+            <option value="all">Alle</option>
+          </select>
+        </label>
+        <div class="inline-actions"><button id="attendanceExportAllBtn" class="button primary" type="button">Kontrollliste herunterladen</button><button id="attendanceExportMissingBtn" class="button" type="button">Fehlende als Excel exportieren</button></div>
+      </div>
+      <div class="table-wrap"><table id="attendanceTable" class="attendance-table"></table></div>
+      <p class="section-help attendance-footnote">Als „teilgenommen“ gelten die aktuell importierten Einwahlen. Exakte Dubletten, ähnliche Namen und fehlerhafte Wunschangaben werden gesondert markiert.</p>
+    </div>
+  </dialog>
+
+  <dialog id="fuxExportDialog" class="wide-dialog fux-export-dialog">
+    <div class="fux-export-form">
+      <div class="detail-heading">
+        <div><p class="eyebrow">Nachgelagerter FuxNoten-Import</p><h2>FuxNoten-Excel vorbereiten</h2><p class="section-help">Die Datei enthält ausschließlich <strong>ProFlex_Kurse</strong> und <strong>ProFlex_Teilnehmer</strong>. Kurs-IDs und Lehrkräfte werden im Projekt gespeichert und bei späteren Exporten wiederverwendet.</p></div>
+        <button id="fuxExportCloseBtn" class="button" type="button">Schließen</button>
+      </div>
+      <div id="fuxExportStats" class="stats-grid compact-stats"></div>
+      <div id="fuxExportIssues" class="message-list"></div>
+      <section class="fux-export-section">
+        <div class="fux-export-section-heading">
+          <div><h3>Kurse, Halbjahre und Lehrkräfte</h3><p class="section-help">Standardmäßig gilt die aktuelle Verteilung für beide Halbjahre. Lehrer bitte einzeln in die vorgesehenen Spalten eintragen.</p></div>
+          <div class="inline-actions">
+            <button class="button compact-button" type="button" data-action="set-fux-semesters" data-mode="both">Alle HJ1 + HJ2</button>
+            <button class="button compact-button" type="button" data-action="set-fux-semesters" data-mode="hj1">Alle nur HJ1</button>
+            <button class="button compact-button" type="button" data-action="set-fux-semesters" data-mode="hj2">Alle nur HJ2</button>
+          </div>
+        </div>
+        <div class="table-wrap"><table id="fuxCoursesTable" class="fux-courses-table"></table></div>
+      </section>
+      <details class="fux-export-section fux-overrides-section">
+        <summary><strong>Individuelle Halbjahreswechsel</strong> <span class="muted">optional</span></summary>
+        <p class="section-help">Nur Schüler hinzufügen, die in HJ1 und HJ2 unterschiedliche Kurse besuchen oder in einem Halbjahr nicht teilnehmen. Ohne Eintrag gilt ihre aktuelle Zuteilung für die beim Kurs markierten Halbjahre.</p>
+        <div class="fux-override-toolbar">
+          <select id="fuxOverridePerson" aria-label="Schüler für Halbjahreswechsel"></select>
+          <button id="fuxAddOverrideBtn" class="button" type="button">Halbjahreswechsel hinzufügen</button>
+        </div>
+        <div class="table-wrap"><table id="fuxOverridesTable" class="fux-overrides-table"></table></div>
+      </details>
+      <div class="fux-export-actions">
+        <button id="fuxExportCancelBtn" class="button" type="button">Abbrechen</button>
+        <button id="fuxDownloadBtn" class="button primary" type="button">FuxNoten-Excel herunterladen</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="messageDialog">
+    <form method="dialog">
+      <h2 id="dialogTitle">Hinweis</h2>
+      <div id="dialogBody" class="message-list"></div>
+      <button class="button primary" value="close">Schließen</button>
+    </form>
+  </dialog>
+
+  <script src="assets/app.js" defer></script>
+  <script src="assets/jszip.min.js" defer></script>
+  <script src="assets/xlsx-import-fix.js" defer></script>
+  <script src="assets/survey-import.js" defer></script>
+  <script src="assets/table-sort.js" defer></script>
+  <script src="assets/attendance-check.js" defer></script>
+</body>
+</html>
